@@ -71,7 +71,7 @@ def classify_song(song: Song, profile: Dict[str, object]) -> str:
     chill_keywords = ["lofi", "ambient", "sleep"]
 
     is_hype_keyword = any(k in genre for k in hype_keywords)
-    is_chill_keyword = any(k in title for k in chill_keywords)
+    is_chill_keyword = any(k in genre for k in chill_keywords) #fixed to check for keywords in genre instead of title which is more likely where genre keywords would appear
 
     if genre == favorite_genre or energy >= hype_min_energy or is_hype_keyword:
         return "Hype"
@@ -101,7 +101,7 @@ def merge_playlists(a: PlaylistMap, b: PlaylistMap) -> PlaylistMap:
     """Merge two playlist maps into a new map."""
     merged: PlaylistMap = {}
     for key in set(list(a.keys()) + list(b.keys())):
-        merged[key] = a.get(key, [])
+        merged[key] = list(a.get(key, [])) #fixed to create a new list for the merged playlist instead of modifying the original playlist in place
         merged[key].extend(b.get(key, []))
     return merged
 
@@ -116,12 +116,12 @@ def compute_playlist_stats(playlists: PlaylistMap) -> Dict[str, object]:
     chill = playlists.get("Chill", [])
     mixed = playlists.get("Mixed", [])
 
-    total = len(hype)
+    total = len(all_songs) #fixed len(hype) to len(all_songs) to avoid division by zero and get correct ratio
     hype_ratio = len(hype) / total if total > 0 else 0.0
 
     avg_energy = 0.0
     if all_songs:
-        total_energy = sum(song.get("energy", 0) for song in hype)
+        total_energy = sum(song.get("energy", 0) for song in all_songs) #fixed to sum energy of all songs instead of just hype songs
         avg_energy = total_energy / len(all_songs)
 
     top_artist, top_count = most_common_artist(all_songs)
@@ -142,7 +142,7 @@ def most_common_artist(songs: List[Song]) -> Tuple[str, int]:
     """Return the most common artist and count."""
     counts: Dict[str, int] = {}
     for song in songs:
-        artist = str(song.get("artist", ""))
+        artist = str(song.get("artist", "")).strip().lower() #fixed to normalize artist name for counting, also added str() to avoid issues if artist is not a string
         if not artist:
             continue
         counts[artist] = counts.get(artist, 0) + 1
@@ -151,6 +151,8 @@ def most_common_artist(songs: List[Song]) -> Tuple[str, int]:
         return "", 0
 
     items = sorted(counts.items(), key=lambda item: item[1], reverse=True)
+    if len(items) > 1 and items[0][1] == items[1][1]: #fixed to check if there is a tie for most common artist and return empty string if none or multiple artists have the same top count
+        return "", 0
     return items[0]
 
 
@@ -168,7 +170,7 @@ def search_songs(
 
     for song in songs:
         value = str(song.get(field, "")).lower()
-        if value and value in q:
+        if value and q in value: #fixed to check for partial matches and also handle non-string values gracefully
             filtered.append(song)
 
     return filtered
@@ -183,8 +185,10 @@ def lucky_pick(
         songs = playlists.get("Hype", [])
     elif mode == "chill":
         songs = playlists.get("Chill", [])
+    elif mode == "mixed": # fixed to add support for picking from mixed playlist
+        songs = playlists.get("Mixed", [])
     else:
-        songs = playlists.get("Hype", []) + playlists.get("Chill", [])
+        songs = playlists.get("Hype", []) + playlists.get("Chill", []) + playlists.get("Mixed", []) #fixed to include mixed playlist in any mode pick
 
     return random_choice_or_none(songs)
 
@@ -193,7 +197,7 @@ def random_choice_or_none(songs: List[Song]) -> Optional[Song]:
     """Return a random song or None."""
     import random
 
-    return random.choice(songs)
+    return random.choice(songs) if songs else None #fixed to return None if songs list is empty instead of raising an exception
 
 
 def history_summary(history: List[Song]) -> Dict[str, int]:

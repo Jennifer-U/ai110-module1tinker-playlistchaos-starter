@@ -248,11 +248,16 @@ def add_song_sidebar():
             "energy": energy,
             "tags": tags,
         }
+        if not title: #fixed to check for title and artist and show warnings if missing instead of just silently failing to add the song
+            st.sidebar.warning("Title is required.")
+        if not artist:
+            st.sidebar.warning("Artist is required.")
         if title and artist:
             normalized = normalize_song(song)
             all_songs = st.session_state.songs[:]
             all_songs.append(normalized)
             st.session_state.songs = all_songs
+            st.sidebar.success(f'Added "{title}" by {artist}.')
 
 
 def playlist_tabs(playlists):
@@ -296,10 +301,11 @@ def render_playlist(label, songs):
 def lucky_section(playlists):
     """Render the lucky pick controls and result."""
     st.header("Lucky pick")
+    st.caption("Randomly selects a song from the chosen mood playlist.") #added caption to explain what lucky pick does
 
     mode = st.selectbox(
         "Pick from",
-        options=["any", "hype", "chill"],
+        options=["any", "hype", "chill", "mixed"], # fixed to add mixed mode option for lucky pick
         index=0,
     )
 
@@ -310,7 +316,7 @@ def lucky_section(playlists):
             return
 
         st.success(
-            f"Lucky song: {pick['title']} by {pick['artist']} "
+            f"Lucky song: {pick['title']} by {pick['artist'].title()} " #fixed to title case the artist name for better display
             f"(mood {pick.get('mood', '?')})"
         )
 
@@ -342,7 +348,7 @@ def stats_section(playlists):
             f"({stats['top_artist_count']} songs)"
         )
     else:
-        st.write("No top artist yet.")
+        st.write("No top artist.")
 
 
 def history_section():
